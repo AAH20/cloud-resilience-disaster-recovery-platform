@@ -1,0 +1,185 @@
+{
+  "schema_version": "continuitytwin/v1",
+  "scenario": "Multi-region Azure revenue-platform recovery game day",
+  "evidence_level": "deterministic-synthetic-recovery-game-day",
+  "recovery_order": [
+    "dns",
+    "network",
+    "identity",
+    "event-stream",
+    "secrets",
+    "integration-worker",
+    "postgresql",
+    "decision-api",
+    "frontend"
+  ],
+  "experiments": [
+    {
+      "name": "postgresql-zone-failover",
+      "failure_type": "availability-zone",
+      "affected_services": [
+        "postgresql",
+        "decision-api",
+        "frontend"
+      ],
+      "recovery_sequence": [
+        "postgresql",
+        "decision-api",
+        "frontend"
+      ],
+      "measured_rto_minutes": 21,
+      "rto_target_minutes": 30,
+      "measured_rpo_seconds": 0,
+      "rpo_target_seconds": 0,
+      "transaction_validations": [
+        {
+          "name": "payment-decision",
+          "passed": true,
+          "duplicates": 0,
+          "missing": 0
+        },
+        {
+          "name": "order-to-cash",
+          "passed": true,
+          "duplicates": 0,
+          "missing": 0
+        }
+      ],
+      "duplicate_transactions": 0,
+      "missing_transactions": 0,
+      "checksum_match": true,
+      "rollback_verified": true,
+      "status": "pass",
+      "failed_gates": []
+    },
+    {
+      "name": "primary-region-loss",
+      "failure_type": "azure-region",
+      "affected_services": [
+        "dns",
+        "identity",
+        "secrets",
+        "network",
+        "postgresql",
+        "event-stream",
+        "decision-api",
+        "integration-worker",
+        "frontend"
+      ],
+      "recovery_sequence": [
+        "dns",
+        "network",
+        "identity",
+        "event-stream",
+        "secrets",
+        "integration-worker",
+        "postgresql",
+        "decision-api",
+        "frontend"
+      ],
+      "measured_rto_minutes": 53,
+      "rto_target_minutes": 60,
+      "measured_rpo_seconds": 75,
+      "rpo_target_seconds": 120,
+      "transaction_validations": [
+        {
+          "name": "payment-decision",
+          "passed": true,
+          "duplicates": 0,
+          "missing": 0
+        },
+        {
+          "name": "order-to-cash",
+          "passed": true,
+          "duplicates": 0,
+          "missing": 0
+        }
+      ],
+      "duplicate_transactions": 0,
+      "missing_transactions": 0,
+      "checksum_match": true,
+      "rollback_verified": true,
+      "status": "pass",
+      "failed_gates": []
+    },
+    {
+      "name": "destructive-data-change",
+      "failure_type": "point-in-time-restore",
+      "affected_services": [
+        "postgresql",
+        "decision-api",
+        "frontend"
+      ],
+      "recovery_sequence": [
+        "postgresql",
+        "decision-api",
+        "frontend"
+      ],
+      "measured_rto_minutes": 31,
+      "rto_target_minutes": 45,
+      "measured_rpo_seconds": 180,
+      "rpo_target_seconds": 120,
+      "transaction_validations": [
+        {
+          "name": "payment-decision",
+          "passed": true,
+          "duplicates": 0,
+          "missing": 0
+        },
+        {
+          "name": "order-to-cash",
+          "passed": true,
+          "duplicates": 0,
+          "missing": 0
+        }
+      ],
+      "duplicate_transactions": 0,
+      "missing_transactions": 0,
+      "checksum_match": true,
+      "rollback_verified": true,
+      "status": "fail",
+      "failed_gates": [
+        "rpo"
+      ]
+    }
+  ],
+  "scorecard": {
+    "experiments": 3,
+    "passed": 2,
+    "failed": 1,
+    "pass_rate_pct": 66.67,
+    "worst_rto_minutes": 53,
+    "worst_rpo_seconds": 180
+  },
+  "unit_economics": {
+    "baseline_outage_hours": 12,
+    "modeled_validated_rto_hours": 0.88,
+    "maximum_contribution_interruption_reduction_usd": 444666.67,
+    "annual_major_event_probability": 0.25,
+    "risk_adjusted_outage_value_usd": 111166.67,
+    "engineering_capacity_value_usd": 120000,
+    "manual_dr_cost_avoided_usd": 80000,
+    "annual_platform_cost_usd": 180000,
+    "modeled_annual_net_value_usd": 131166.67,
+    "maximum_exposure_is_not_annual_savings": true
+  },
+  "production_control": {
+    "auto_inject_failure": false,
+    "auto_promote_recovery": false,
+    "required_gates": [
+      "scope approval",
+      "blast-radius limit",
+      "abort condition",
+      "transaction validation",
+      "data reconciliation",
+      "business owner approval"
+    ]
+  },
+  "claim_boundary": [
+    "No Azure, AWS, GCP, Kubernetes, database, identity or production system failure was injected",
+    "Timings, data loss, revenue, probability and recovery costs are synthetic inputs",
+    "An experiment passes only as a modeled evidence contract, not as proof of a live recovery",
+    "Maximum outage exposure is not represented as guaranteed annual savings"
+  ],
+  "receipt_sha256": "70b65f4da0955c1479c97919949a89ce0799d1c8f8f7e9abaa86e5c6ef5a2ef2"
+}

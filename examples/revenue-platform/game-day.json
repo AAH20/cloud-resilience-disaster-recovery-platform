@@ -1,0 +1,55 @@
+{
+  "scenario": "Multi-region Azure revenue-platform recovery game day",
+  "services": [
+    {"name": "dns", "recovery_minutes": 2},
+    {"name": "identity", "recovery_minutes": 3},
+    {"name": "secrets", "recovery_minutes": 2},
+    {"name": "network", "recovery_minutes": 4},
+    {"name": "postgresql", "recovery_minutes": 8},
+    {"name": "event-stream", "recovery_minutes": 5},
+    {"name": "decision-api", "recovery_minutes": 3},
+    {"name": "integration-worker", "recovery_minutes": 3},
+    {"name": "frontend", "recovery_minutes": 2}
+  ],
+  "dependencies": [
+    {"dependency": "dns", "service": "identity"},
+    {"dependency": "identity", "service": "secrets"},
+    {"dependency": "network", "service": "postgresql"},
+    {"dependency": "secrets", "service": "postgresql"},
+    {"dependency": "network", "service": "event-stream"},
+    {"dependency": "postgresql", "service": "decision-api"},
+    {"dependency": "event-stream", "service": "integration-worker"},
+    {"dependency": "decision-api", "service": "frontend"}
+  ],
+  "experiments": [
+    {
+      "name": "postgresql-zone-failover", "failure_type": "availability-zone", "affected_services": ["postgresql", "decision-api", "frontend"],
+      "detection_minutes": 1, "transaction_validation_minutes": 4, "backlog_recovery_minutes": 3,
+      "rto_target_minutes": 30, "measured_rpo_seconds": 0, "rpo_target_seconds": 0,
+      "checksum_match": true, "rollback_verified": true,
+      "transaction_validations": [{"name": "payment-decision", "passed": true, "duplicates": 0, "missing": 0}, {"name": "order-to-cash", "passed": true, "duplicates": 0, "missing": 0}]
+    },
+    {
+      "name": "primary-region-loss", "failure_type": "azure-region", "affected_services": ["dns", "identity", "secrets", "network", "postgresql", "event-stream", "decision-api", "integration-worker", "frontend"],
+      "detection_minutes": 3, "transaction_validation_minutes": 8, "backlog_recovery_minutes": 10,
+      "rto_target_minutes": 60, "measured_rpo_seconds": 75, "rpo_target_seconds": 120,
+      "checksum_match": true, "rollback_verified": true,
+      "transaction_validations": [{"name": "payment-decision", "passed": true, "duplicates": 0, "missing": 0}, {"name": "order-to-cash", "passed": true, "duplicates": 0, "missing": 0}]
+    },
+    {
+      "name": "destructive-data-change", "failure_type": "point-in-time-restore", "affected_services": ["postgresql", "decision-api", "frontend"],
+      "detection_minutes": 5, "transaction_validation_minutes": 8, "backlog_recovery_minutes": 5,
+      "rto_target_minutes": 45, "measured_rpo_seconds": 180, "rpo_target_seconds": 120,
+      "checksum_match": true, "rollback_verified": true,
+      "transaction_validations": [{"name": "payment-decision", "passed": true, "duplicates": 0, "missing": 0}, {"name": "order-to-cash", "passed": true, "duplicates": 0, "missing": 0}]
+    }
+  ],
+  "economics": {
+    "contribution_per_hour_usd": 40000,
+    "baseline_outage_hours": 12,
+    "annual_major_event_probability": 0.25,
+    "engineering_capacity_value_usd": 120000,
+    "manual_dr_cost_avoided_usd": 80000,
+    "annual_platform_cost_usd": 180000
+  }
+}
